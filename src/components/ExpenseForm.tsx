@@ -5,6 +5,7 @@ import { convertToGBP, rateFor, round2 } from "../fx";
 import { newId, saveExpense } from "../db";
 import { todayISO } from "../format";
 import { CategoryGrid } from "./CategoryGrid";
+import { AmountKeypad } from "./AmountKeypad";
 
 // Shared form for creating and editing an expense. Computes and stores the
 // canonical GBP amount, keeping the original amount/currency/rate for reference.
@@ -17,7 +18,7 @@ export function ExpenseForm({
   onDone: () => void;
   onCancel?: () => void;
 }) {
-  const { categories, fxCache, reload, online } = useStore();
+  const { categories, fxCache, fxStatus, reload, online } = useStore();
 
   const [amount, setAmount] = useState(
     initial ? String(initial.originalAmount) : "",
@@ -95,16 +96,7 @@ export function ExpenseForm({
             </button>
           ))}
         </div>
-        <div className="amount-input">
-          <span className="amount-symbol">{CURRENCY_SYMBOL[currency]}</span>
-          <input
-            inputMode="decimal"
-            placeholder="0.00"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-            autoFocus={!initial}
-          />
-        </div>
+        <AmountKeypad value={amount} currency={currency} onChange={setAmount} />
 
         {needsRate && (
           <div className="fx-line">
@@ -114,8 +106,9 @@ export function ExpenseForm({
               </span>
             ) : (
               <span className="fx-warn">
-                No rate for {currency}
-                {online ? " yet" : " (offline)"} — enter one below.
+                {fxStatus === "loading"
+                  ? `Fetching ${currency} rate…`
+                  : `No ${currency} rate ${online ? "available" : "(offline)"} — enter one below.`}
               </span>
             )}
             <details className="fx-details">
