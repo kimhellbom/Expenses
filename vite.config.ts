@@ -40,7 +40,7 @@ export default defineConfig({
         // Frankfurter FX rates: serve from network, fall back to cache offline.
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.href.includes("frankfurter.app"),
+            urlPattern: ({ url }) => url.href.includes("frankfurter"),
             handler: "NetworkFirst",
             options: {
               cacheName: "fx-rates",

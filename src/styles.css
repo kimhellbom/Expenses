@@ -181,23 +181,45 @@ input {
   color: #fff;
   border-color: var(--accent);
 }
-.amount-input {
+/* On-screen numeric keypad */
+.keypad-display {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  justify-content: center;
   gap: 8px;
+  padding: 6px 0 12px;
+  min-height: 56px;
 }
-.amount-symbol {
-  font-size: 36px;
+.keypad-symbol {
+  font-size: 30px;
   color: var(--muted);
 }
-.amount-input input {
-  flex: 1;
-  background: none;
-  border: none;
-  font-size: 44px;
+.keypad-value {
+  font-size: 46px;
   font-weight: 700;
-  width: 100%;
-  outline: none;
+  line-height: 1;
+}
+.keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.keypad-key {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 24px;
+  font-weight: 600;
+  padding: 16px 0;
+  cursor: pointer;
+  user-select: none;
+}
+.keypad-key:active {
+  background: var(--accent-press);
+  color: #fff;
+}
+.keypad-back {
+  font-size: 22px;
 }
 .fx-line {
   margin-top: 10px;

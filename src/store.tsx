@@ -14,11 +14,15 @@ import {
 } from "./db";
 import { refreshRates } from "./fx";
 
+export type FxStatus = "idle" | "loading" | "ok" | "error";
+
 interface Store {
   ready: boolean;
   categories: Category[];
   expenses: Expense[];
   fxCache?: FxCache;
+  fxStatus: FxStatus;
+  fxError?: string;
   online: boolean;
   /** Reload categories + expenses from IndexedDB. */
   reload: () => Promise<void>;
@@ -33,6 +37,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [fxCache, setFxCache] = useState<FxCache | undefined>();
+  const [fxStatus, setFxStatus] = useState<FxStatus>("idle");
+  const [fxError, setFxError] = useState<string | undefined>();
   const [online, setOnline] = useState(
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
@@ -44,8 +50,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const reloadRates = useCallback(async () => {
-    const cache = await refreshRates();
-    setFxCache(cache);
+    setFxStatus("loading");
+    setFxError(undefined);
+    const { cache, error } = await refreshRates();
+    if (cache) setFxCache(cache);
+    setFxError(error);
+    setFxStatus(error ? "error" : "ok");
   }, []);
 
   useEffect(() => {
@@ -85,6 +95,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     categories,
     expenses,
     fxCache,
+    fxStatus,
+    fxError,
     online,
     reload,
     reloadRates,
