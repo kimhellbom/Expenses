@@ -11,7 +11,8 @@ import {
 import type { Category } from "../types";
 
 export function Settings() {
-  const { categories, fxCache, reload, reloadRates, online } = useStore();
+  const { categories, fxCache, fxStatus, fxError, reload, reloadRates, online } =
+    useStore();
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -121,8 +122,18 @@ export function Settings() {
         ) : (
           <p className="muted">No rates cached yet.</p>
         )}
-        <button className="btn btn-ghost" onClick={() => reloadRates()} disabled={!online}>
-          {online ? "Refresh rates" : "Offline — can't refresh"}
+        {fxStatus === "error" && fxError && <p className="fx-warn">{fxError}</p>}
+        {fxStatus === "ok" && <p className="fx-converted">Rates up to date.</p>}
+        <button
+          className="btn btn-ghost"
+          onClick={() => reloadRates()}
+          disabled={!online || fxStatus === "loading"}
+        >
+          {fxStatus === "loading"
+            ? "Refreshing…"
+            : online
+              ? "Refresh rates"
+              : "Offline — can't refresh"}
         </button>
       </section>
 
