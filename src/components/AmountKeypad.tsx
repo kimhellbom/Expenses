@@ -2,39 +2,52 @@ import { CURRENCY_SYMBOL, type Currency } from "../types";
 
 // Custom on-screen number pad so amount entry is instant and identical on iOS
 // and Android (iOS Safari can't open the native keyboard without a tap).
+//
+// "Pence mode": the value is a raw string of digits interpreted as pence, so
+// the decimal point places itself automatically. Typing 1,2,3,4 gives £12.34;
+// no dot key needed. A "00" key makes round amounts fast.
+
+const MAX_DIGITS = 9; // up to £9,999,999.99
 
 /**
- * Apply a keypad press to the current amount string. Pure + testable.
- * Keys: "0".."9", ".", "back". Enforces a single decimal point, at most two
- * decimal places, and no pointless leading zeros (e.g. "00", "05").
+ * Apply a keypad press to the raw digit string. Pure + testable.
+ * Keys: "0".."9", "00", "back". Leading zeros are dropped so the value stays
+ * canonical ("" means zero).
  */
-export function applyKeypad(current: string, key: string): string {
-  if (key === "back") return current.slice(0, -1);
-
-  if (key === ".") {
-    if (current.includes(".")) return current;
-    return current === "" ? "0." : current + ".";
-  }
-
-  // A digit.
-  if (current.includes(".")) {
-    const decimals = current.split(".")[1] ?? "";
-    if (decimals.length >= 2) return current; // cap at 2 dp
-    return current + key;
-  }
-  // Integer part: avoid leading zeros like "0", "05".
-  if (current === "0") return key === "0" ? "0" : key;
-  return current + key;
+export function applyPence(digits: string, key: string): string {
+  if (key === "back") return digits.slice(0, -1);
+  const add = key === "00" ? "00" : key;
+  const next = (digits + add).replace(/^0+/, ""); // drop leading zeros
+  return next.slice(0, MAX_DIGITS);
 }
 
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "back"];
+/** Raw pence-digits -> numeric amount (e.g. "1234" -> 12.34, "" -> 0). */
+export function penceToAmount(digits: string): number {
+  return digits === "" ? 0 : Number(digits) / 100;
+}
+
+/** Numeric amount -> raw pence-digits (e.g. 12.5 -> "1250"). */
+export function amountToPence(amount: number): string {
+  if (!Number.isFinite(amount) || amount <= 0) return "";
+  return String(Math.round(amount * 100));
+}
+
+/** Formatted display string, always two decimals with grouping (e.g. "1,234.50"). */
+export function formatPence(digits: string): string {
+  return penceToAmount(digits).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "back"];
 
 export function AmountKeypad({
-  value,
+  digits,
   currency,
   onChange,
 }: {
-  value: string;
+  digits: string;
   currency: Currency;
   onChange: (next: string) => void;
 }) {
@@ -42,7 +55,7 @@ export function AmountKeypad({
     <div className="keypad">
       <div className="keypad-display">
         <span className="keypad-symbol">{CURRENCY_SYMBOL[currency]}</span>
-        <span className="keypad-value">{value || "0"}</span>
+        <span className="keypad-value">{formatPence(digits)}</span>
       </div>
       <div className="keypad-grid">
         {KEYS.map((k) => (
@@ -51,7 +64,7 @@ export function AmountKeypad({
             type="button"
             className={`keypad-key ${k === "back" ? "keypad-back" : ""}`}
             aria-label={k === "back" ? "Delete" : k}
-            onClick={() => onChange(applyKeypad(value, k))}
+            onClick={() => onChange(applyPence(digits, k))}
           >
             {k === "back" ? "⌫" : k}
           </button>
