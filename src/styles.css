@@ -221,6 +221,45 @@ input {
 .keypad-back {
   font-size: 22px;
 }
+
+/* Floating Add button (FAB) on the Add screen */
+.form-floating {
+  /* Leave room so the note field isn't hidden behind the FAB. */
+  padding-bottom: 84px;
+}
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #04201c;
+  font-size: 17px;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  z-index: 20;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+.fab:active {
+  transform: scale(0.96);
+}
+.fab:disabled {
+  background: var(--surface-2);
+  color: var(--muted);
+  box-shadow: none;
+  opacity: 0.7;
+  /* Let taps reach the category tile underneath while Add isn't actionable. */
+  pointer-events: none;
+}
+.fab-check {
+  font-size: 18px;
+}
 .fx-line {
   margin-top: 10px;
   font-size: 14px;
