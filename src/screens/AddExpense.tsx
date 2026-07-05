@@ -17,7 +17,7 @@ export function AddExpense({ onSaved }: { onSaved: () => void }) {
           {fxCache ? ` Using cached rates from ${fxCache.date}.` : ""}
         </p>
       )}
-      <ExpenseForm onDone={onSaved} />
+      <ExpenseForm onDone={onSaved} floating />
     </div>
   );
 }

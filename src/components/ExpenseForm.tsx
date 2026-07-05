@@ -5,7 +5,7 @@ import { convertToGBP, rateFor, round2 } from "../fx";
 import { newId, saveExpense } from "../db";
 import { todayISO } from "../format";
 import { CategoryGrid } from "./CategoryGrid";
-import { AmountKeypad } from "./AmountKeypad";
+import { AmountKeypad, amountToPence, penceToAmount } from "./AmountKeypad";
 
 // Shared form for creating and editing an expense. Computes and stores the
 // canonical GBP amount, keeping the original amount/currency/rate for reference.
@@ -13,15 +13,19 @@ export function ExpenseForm({
   initial,
   onDone,
   onCancel,
+  floating = false,
 }: {
   initial?: Expense;
   onDone: () => void;
   onCancel?: () => void;
+  /** Render the primary action as an always-visible floating button (Add screen). */
+  floating?: boolean;
 }) {
   const { categories, fxCache, fxStatus, reload, online } = useStore();
 
-  const [amount, setAmount] = useState(
-    initial ? String(initial.originalAmount) : "",
+  // Amount is held as a raw pence-digit string driven by the keypad.
+  const [digits, setDigits] = useState(
+    initial ? amountToPence(initial.originalAmount) : "",
   );
   const [currency, setCurrency] = useState<Currency>(
     initial?.originalCurrency ?? "GBP",
@@ -43,7 +47,7 @@ export function ExpenseForm({
         ? Number(rateOverride)
         : (cacheRate ?? NaN);
 
-  const numericAmount = Number(amount);
+  const numericAmount = penceToAmount(digits);
   const gbp = useMemo(
     () =>
       Number.isFinite(numericAmount) && numericAmount > 0
@@ -79,7 +83,7 @@ export function ExpenseForm({
   }
 
   return (
-    <div className="form">
+    <div className={`form ${floating ? "form-floating" : ""}`}>
       <div className="amount-block">
         <div className="currency-toggle">
           {CURRENCIES.map((c) => (
@@ -96,7 +100,7 @@ export function ExpenseForm({
             </button>
           ))}
         </div>
-        <AmountKeypad value={amount} currency={currency} onChange={setAmount} />
+        <AmountKeypad digits={digits} currency={currency} onChange={setDigits} />
 
         {needsRate && (
           <div className="fx-line">
@@ -162,21 +166,36 @@ export function ExpenseForm({
         />
       </label>
 
-      <div className="form-actions">
-        {onCancel && (
-          <button type="button" className="btn btn-ghost" onClick={onCancel}>
-            Cancel
-          </button>
-        )}
+      {floating ? (
         <button
           type="button"
-          className="btn btn-primary"
+          className="fab"
           disabled={!canSave}
           onClick={handleSave}
+          aria-label="Add expense"
         >
-          {initial ? "Save changes" : "Add expense"}
+          <span className="fab-check" aria-hidden>
+            ✓
+          </span>
+          Add
         </button>
-      </div>
+      ) : (
+        <div className="form-actions">
+          {onCancel && (
+            <button type="button" className="btn btn-ghost" onClick={onCancel}>
+              Cancel
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!canSave}
+            onClick={handleSave}
+          >
+            {initial ? "Save changes" : "Add expense"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
