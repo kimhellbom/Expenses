@@ -1,45 +1,49 @@
-/* Light palette is the default; dark is applied via prefers-color-scheme so the
-   app follows the system setting. Colours are referenced through variables so
-   both themes share one set of rules. */
+/* Mono-minimal theme. Near-monochrome greys carry the UI; a single restrained
+   blue accent appears only on selected / active state and focus. Primary
+   actions are flat solid ink (black in light, near-white in dark) — no
+   gradients. Light is the default; dark applies via prefers-color-scheme so the
+   app follows the system setting. */
 :root {
   color-scheme: light;
-  --bg: #f4f5fb;
+  --bg: #fcfcfb;
   --surface: #ffffff;
-  --surface-2: #eceef8;
-  --line: #e3e6f1;
-  --text: #191c28;
-  --muted: #6b7286;
-  --accent: #6366f1;
-  --accent-press: #4f46e5;
-  --accent-soft: rgba(99, 102, 241, 0.12);
-  --accent-grad: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --surface-2: #f3f3f1;
+  --line: #e7e7e3;
+  --text: #141414;
+  --muted: #75756e;
+  /* Ink = primary action colour (buttons). */
+  --primary: #141414;
+  --on-primary: #fafafa;
+  /* Accent = selection / active / focus only, used sparingly. */
+  --accent: #3651c9;
+  --accent-soft: rgba(54, 81, 201, 0.1);
   --on-accent: #ffffff;
-  --danger: #e5484d;
-  --warn: #b45309;
-  --warn-soft: rgba(180, 83, 9, 0.12);
-  --shadow: 0 1px 2px rgba(35, 40, 70, 0.06), 0 4px 16px rgba(35, 40, 70, 0.06);
-  --radius: 14px;
+  --danger: #c0362c;
+  --warn: #9a6a00;
+  --warn-soft: rgba(154, 106, 0, 0.1);
+  --shadow: 0 1px 2px rgba(17, 17, 17, 0.04);
+  --radius: 11px;
   --tabbar-h: 64px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --bg: #0f1421;
-    --surface: #161d2d;
-    --surface-2: #212a40;
-    --line: #2b3450;
-    --text: #e9edf7;
-    --muted: #98a2ba;
-    --accent: #7c85ff;
-    --accent-press: #6366f1;
-    --accent-soft: rgba(124, 133, 255, 0.16);
-    --accent-grad: linear-gradient(135deg, #7c85ff, #a78bfa);
-    --on-accent: #0b1020;
-    --danger: #ff6169;
-    --warn: #fbbf24;
-    --warn-soft: rgba(251, 191, 36, 0.15);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.35);
+    --bg: #0c0c0d;
+    --surface: #161617;
+    --surface-2: #1f1f21;
+    --line: #2a2a2c;
+    --text: #f1f1ef;
+    --muted: #9a9a92;
+    --primary: #f1f1ef;
+    --on-primary: #101011;
+    --accent: #8aa0ff;
+    --accent-soft: rgba(138, 160, 255, 0.16);
+    --on-accent: #0c0c0d;
+    --danger: #f0736a;
+    --warn: #e0b34d;
+    --warn-soft: rgba(224, 179, 77, 0.14);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -61,6 +65,19 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 16px;
   overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* Money reads as tabular figures wherever it appears. */
+.keypad-value,
+.entry-amount,
+.day-total,
+.donut-total,
+.bar-head {
+  font-variant-numeric: tabular-nums;
+}
+h1 {
+  letter-spacing: -0.02em;
 }
 
 button,
@@ -181,14 +198,13 @@ select,
   transform: scale(0.97);
 }
 .btn-primary {
-  background: var(--accent-grad);
-  color: var(--on-accent);
-  box-shadow: 0 4px 14px var(--accent-soft);
+  background: var(--primary);
+  color: var(--on-primary);
+  letter-spacing: -0.01em;
 }
 .btn-primary:disabled {
   background: var(--surface-2);
   color: var(--muted);
-  box-shadow: none;
   transform: none;
 }
 .btn-ghost {
@@ -232,9 +248,9 @@ select,
   color: var(--muted);
 }
 .cur-btn-active {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
 }
 /* On-screen numeric keypad */
 .keypad-display {
@@ -250,9 +266,11 @@ select,
   color: var(--muted);
 }
 .keypad-value {
-  font-size: 46px;
+  font-size: 48px;
   font-weight: 700;
   line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
   /* Re-keyed on every digit change (see AmountKeypad) so this replays. */
   animation: value-pop 0.13s ease-out;
 }
@@ -281,8 +299,9 @@ select,
   transition: transform 0.05s ease, background 0.1s ease, color 0.1s ease;
 }
 .keypad-key:active {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
   transform: scale(0.93);
 }
 .keypad-back {
@@ -470,10 +489,10 @@ select,
   transform: scale(0.96);
 }
 .cat-tile-active {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
-  box-shadow: 0 4px 14px var(--accent-soft);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: none;
   animation: tile-pop 0.18s ease-out;
 }
 @keyframes tile-pop {
