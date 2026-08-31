@@ -36,6 +36,11 @@ export function ExpenseForm({
   const [date, setDate] = useState(initial?.date ?? todayISO());
   const [note, setNote] = useState(initial?.note ?? "");
 
+  // Two-step entry on the Add screen: amount first (thumb-reachable keypad),
+  // then category. Editing keeps the single all-in-one form.
+  const [step, setStep] = useState<"amount" | "category">("amount");
+  const amountEntered = digits !== "";
+
   // Rate = units of `currency` per 1 GBP. Editable so the user can override
   // when offline or paying at a known rate.
   const cacheRate = rateFor(currency, fxCache);
@@ -82,59 +87,147 @@ export function ExpenseForm({
     onDone();
   }
 
-  return (
-    <div className={`form ${floating ? "form-floating" : ""}`}>
-      <div className="amount-block">
-        <div className="currency-toggle">
-          {CURRENCIES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={`cur-btn ${currency === c ? "cur-btn-active" : ""}`}
-              onClick={() => {
-                setCurrency(c);
-                setRateOverride("");
-              }}
-            >
-              {CURRENCY_SYMBOL[c]} {c}
-            </button>
-          ))}
-        </div>
-        <AmountKeypad digits={digits} currency={currency} onChange={setDigits} />
+  const currencyToggle = (
+    <div className="currency-toggle">
+      {CURRENCIES.map((c) => (
+        <button
+          key={c}
+          type="button"
+          className={`cur-btn ${currency === c ? "cur-btn-active" : ""}`}
+          onClick={() => {
+            setCurrency(c);
+            setRateOverride("");
+          }}
+        >
+          {CURRENCY_SYMBOL[c]} {c}
+        </button>
+      ))}
+    </div>
+  );
 
-        {needsRate && (
-          <div className="fx-line">
-            {rateKnown ? (
-              <span className="fx-converted">
-                ≈ {Number.isFinite(gbp) ? `£${gbp.toFixed(2)}` : "—"} GBP
-              </span>
-            ) : (
-              <span className="fx-warn">
-                {fxStatus === "loading"
-                  ? `Fetching ${currency} rate…`
-                  : `No ${currency} rate ${online ? "available" : "(offline)"} — enter one below.`}
-              </span>
-            )}
-            <details className="fx-details">
-              <summary>
-                rate: 1 GBP = {Number.isFinite(effectiveRate) ? effectiveRate : "?"} {currency}
-                {cacheRate && fxCache?.date ? ` (ECB ${fxCache.date})` : ""}
-              </summary>
-              <label className="fx-override">
-                Override rate (1 GBP =)
-                <input
-                  inputMode="decimal"
-                  placeholder={cacheRate ? String(cacheRate) : `${currency} per GBP`}
-                  value={rateOverride}
-                  onChange={(e) =>
-                    setRateOverride(e.target.value.replace(/[^0-9.]/g, ""))
-                  }
-                />
-                {currency}
-              </label>
-            </details>
-          </div>
+  const fxLine = needsRate ? (
+    <div className="fx-line">
+      {rateKnown ? (
+        <span className="fx-converted">
+          ≈ {Number.isFinite(gbp) ? `£${gbp.toFixed(2)}` : "—"} GBP
+        </span>
+      ) : (
+        <span className="fx-warn">
+          {fxStatus === "loading"
+            ? `Fetching ${currency} rate…`
+            : `No ${currency} rate ${online ? "available" : "(offline)"} — enter one below.`}
+        </span>
+      )}
+      <details className="fx-details">
+        <summary>
+          rate: 1 GBP = {Number.isFinite(effectiveRate) ? effectiveRate : "?"} {currency}
+          {cacheRate && fxCache?.date ? ` (ECB ${fxCache.date})` : ""}
+        </summary>
+        <label className="fx-override">
+          Override rate (1 GBP =)
+          <input
+            inputMode="decimal"
+            placeholder={cacheRate ? String(cacheRate) : `${currency} per GBP`}
+            value={rateOverride}
+            onChange={(e) =>
+              setRateOverride(e.target.value.replace(/[^0-9.]/g, ""))
+            }
+          />
+          {currency}
+        </label>
+      </details>
+    </div>
+  ) : null;
+
+  const detailsFields = (
+    <details className="add-details">
+      <summary>Date &amp; note (optional)</summary>
+      <label className="field">
+        <span className="field-label">Date</span>
+        <input
+          type="date"
+          value={date}
+          max={todayISO()}
+          onChange={(e) => setDate(e.target.value)}
+        />
+      </label>
+      <label className="field">
+        <span className="field-label">Note</span>
+        <input
+          type="text"
+          placeholder="e.g. lunch with Sam"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+      </label>
+    </details>
+  );
+
+  // ---- Two-step Add flow (amount → category) ----
+  if (floating) {
+    return (
+      <div className="add-flow">
+        {step === "amount" ? (
+          <>
+            {currencyToggle}
+            <div className="add-spacer" />
+            <div className="add-panel">
+              <AmountKeypad digits={digits} currency={currency} onChange={setDigits} />
+              {fxLine}
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary add-cta"
+              disabled={!amountEntered}
+              onClick={() => setStep("category")}
+            >
+              Next →
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="add-back"
+              onClick={() => setStep("amount")}
+              aria-label="Back to amount"
+            >
+              ← {CURRENCY_SYMBOL[currency]}
+              {penceToAmount(digits).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+              {needsRate && Number.isFinite(gbp) ? ` · £${gbp.toFixed(2)}` : ""}
+            </button>
+            <div className="add-panel add-panel-scroll">
+              <CategoryGrid
+                categories={categories}
+                selectedId={categoryId}
+                onSelect={setCategoryId}
+              />
+              {detailsFields}
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary add-cta"
+              disabled={!canSave}
+              onClick={handleSave}
+            >
+              <span aria-hidden>✓ </span>Add expense
+            </button>
+          </>
         )}
+      </div>
+    );
+  }
+
+  // ---- Single-page form (editing an existing expense) ----
+  return (
+    <div className="form">
+      <div className="amount-block">
+        {currencyToggle}
+        <AmountKeypad digits={digits} currency={currency} onChange={setDigits} />
+        {fxLine}
       </div>
 
       <label className="field-label">Category</label>
@@ -166,36 +259,21 @@ export function ExpenseForm({
         />
       </label>
 
-      {floating ? (
+      <div className="form-actions">
+        {onCancel && (
+          <button type="button" className="btn btn-ghost" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
         <button
           type="button"
-          className="fab"
+          className="btn btn-primary"
           disabled={!canSave}
           onClick={handleSave}
-          aria-label="Add expense"
         >
-          <span className="fab-check" aria-hidden>
-            ✓
-          </span>
-          Add
+          {initial ? "Save changes" : "Add expense"}
         </button>
-      ) : (
-        <div className="form-actions">
-          {onCancel && (
-            <button type="button" className="btn btn-ghost" onClick={onCancel}>
-              Cancel
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!canSave}
-            onClick={handleSave}
-          >
-            {initial ? "Save changes" : "Add expense"}
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

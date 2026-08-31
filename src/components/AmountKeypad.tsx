@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { CURRENCY_SYMBOL, type Currency } from "../types";
 
 // Custom on-screen number pad so amount entry is instant and identical on iOS
@@ -42,7 +43,7 @@ export function formatPence(digits: string): string {
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "back"];
 
-export function AmountKeypad({
+export const AmountKeypad = memo(function AmountKeypad({
   digits,
   currency,
   onChange,
@@ -64,7 +65,9 @@ export function AmountKeypad({
             type="button"
             className={`keypad-key ${k === "back" ? "keypad-back" : ""}`}
             aria-label={k === "back" ? "Delete" : k}
-            onClick={() => onChange(applyPence(digits, k))}
+            // Fire on pointerdown (not click) so rapid taps register the instant
+            // the finger lands — no click-settle delay, no dropped presses.
+            onPointerDown={() => onChange(applyPence(digits, k))}
           >
             {k === "back" ? "⌫" : k}
           </button>
@@ -72,4 +75,4 @@ export function AmountKeypad({
       </div>
     </div>
   );
-}
+});

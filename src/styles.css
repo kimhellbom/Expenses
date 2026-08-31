@@ -38,6 +38,15 @@ input {
   color: inherit;
 }
 
+/* Kill the ~300ms double-tap delay and stop rapid taps being swallowed as a
+   zoom gesture — the main cause of laggy / dropped button presses on mobile. */
+button,
+input,
+select,
+[role="button"] {
+  touch-action: manipulation;
+}
+
 /* ---- Layout ---- */
 .app {
   min-height: 100%;
@@ -222,43 +231,80 @@ input {
   font-size: 22px;
 }
 
-/* Floating Add button (FAB) on the Add screen */
-.form-floating {
-  /* Leave room so the note field isn't hidden behind the FAB. */
-  padding-bottom: 84px;
+/* ---- Two-step Add flow (full-height, thumb-reachable) ---- */
+.add-screen {
+  /* Fill the area above the fixed tab bar with a definite height, so the flex
+     spacer can push the keypad + CTA down into the thumb-reachable lower half. */
+  min-height: calc(100dvh - var(--tabbar-h) - env(safe-area-inset-bottom));
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
 }
-.fab {
-  position: fixed;
-  right: 16px;
-  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+.add-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 16px 22px;
-  border: none;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #04201c;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.add-head h1 {
+  font-size: 22px;
+  margin: 0;
+}
+.add-banner {
+  margin: 4px 0 8px;
+}
+.add-flow {
+  flex: 1;
+  min-height: 0; /* let the scrollable step-2 panel shrink to fit */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 6px;
+}
+/* Pushes the keypad + CTA down into the lower, thumb-reachable half. */
+.add-spacer {
+  flex: 1;
+  min-height: 8px;
+}
+.add-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.add-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.add-cta {
+  width: 100%;
+  padding: 17px;
   font-size: 17px;
-  font-weight: 700;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-  cursor: pointer;
-  z-index: 20;
-  transition: opacity 0.15s ease, transform 0.1s ease;
 }
-.fab:active {
-  transform: scale(0.96);
-}
-.fab:disabled {
+/* Back-chip on the category step, showing the amount already entered. */
+.add-back {
+  align-self: flex-start;
   background: var(--surface-2);
-  color: var(--muted);
-  box-shadow: none;
-  opacity: 0.7;
-  /* Let taps reach the category tile underneath while Add isn't actionable. */
-  pointer-events: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
 }
-.fab-check {
-  font-size: 18px;
+.add-details {
+  margin-top: 12px;
+}
+.add-details summary {
+  color: var(--muted);
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 14px;
+}
+.add-details .field {
+  margin-top: 10px;
 }
 .fx-line {
   margin-top: 10px;
