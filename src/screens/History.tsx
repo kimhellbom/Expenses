@@ -6,8 +6,8 @@ import { formatGBP, formatMoney, friendlyDate } from "../format";
 import { ExpenseForm } from "../components/ExpenseForm";
 import type { Category, Expense } from "../types";
 
-export function History() {
-  const { expenses, categories, reload } = useStore();
+export function History({ onReview }: { onReview: () => void }) {
+  const { expenses, categories, pending, reload } = useStore();
   const [editing, setEditing] = useState<Expense | null>(null);
 
   const catById = new Map<string, Category>(categories.map((c) => [c.id, c]));
@@ -39,6 +39,14 @@ export function History() {
       <header className="page-head">
         <h1>History</h1>
       </header>
+
+      {pending.length > 0 && (
+        <button type="button" className="review-banner" onClick={onReview}>
+          <span className="review-banner-dot" aria-hidden />
+          {pending.length} transaction{pending.length > 1 ? "s" : ""} to review
+          <span className="review-banner-go" aria-hidden>→</span>
+        </button>
+      )}
 
       {groups.length === 0 && (
         <p className="empty">No expenses yet. Add your first on the “Add” tab.</p>
