@@ -28,23 +28,27 @@ From the Play Store (free tier is enough — this needs one macro).
 - (Optional) restrict to notifications that contain "with" so only payments fire.
 
 **Add Action → Files → "Write to File"**
-- File: `Documents/expenses-inbox.txt` (any folder you can find in Files)
-- Mode: **Append** (not overwrite)
-- Enable **"Add new line"** so each entry is on its own line
-- Content:
+- Access: **All File Access**, Folder `Documents`, Filename `expenses-inbox.txt`
+- Mode: **Append**
+- In the text field, enter (start with a leading `\n` so each entry is on its own line):
 
-```json
-{"ts":[system_time_ms],"title":"[not_title]","text":"[notification]"}
+```
+{system_time_ms}|{not_title}|{notification}
 ```
 
-> **Important:** insert each `[…]` value from the **magic-text button** (the
-> `{ }` icon in the content field) — do **not** type them. If you type the
-> names, MacroDroid writes them literally (`[not_title]`) instead of the value.
+> **Important:** insert each `{…}` value from the **magic-text button** (the `…`
+> beside the text field) — do **not** type them. MacroDroid's magic text uses
+> curly braces `{…}`; typing the names writes them literally instead of the value.
+> Type the `|` bars yourself between the inserted tokens.
 
-The correct MacroDroid tokens are:
-- `[system_time_ms]` → notification time in milliseconds (makes de-duplication exact)
-- `[not_title]` → the merchant (notification title)
-- `[notification]` → the notification message, e.g. "€7.50 with Barclaycard …"
+The tokens (from the magic-text picker):
+- `{system_time_ms}` → time in milliseconds — pick **System time (ms)**. (Seconds,
+  `{system_time}`, also works — the app normalises it.)
+- `{not_title}` → the merchant — **Notification Title**
+- `{notification}` → the message, e.g. "€7.50 with Barclaycard …"
+
+The app also accepts a JSON line (`{"ts":..,"title":"..","text":".."}`) if you
+prefer, but pipe-separated avoids any quoting issues.
 
 Save the macro.
 
@@ -90,9 +94,9 @@ Re-importing the same file is safe: already-imported transactions are skipped.
 
 - **"No new transactions found."** The file was empty or every line was already
   imported. Check the macro's file path and that it's set to **Append**.
-- **Lines show `[not_title]` / `[notification]` literally.** MacroDroid didn't
+- **Lines show `{not_title}` / `{notification}` literally.** MacroDroid didn't
   substitute the variables — you typed them instead of inserting them from the
-  magic-text (`{ }`) button. Fix the macro's content, then pay again.
+  magic-text (`…`) button. Fix the macro's text, then pay again.
 - **"N unreadable."** A line had no recognisable amount — check the content uses
   the `[notification]` token for the message.
 - **Wrong currency/amount.** The notification text was unusual; edit the expense

@@ -86,12 +86,15 @@ export function parseCapture(raw: RawCapture, now = Date.now()): ParsedTxn | nul
   const found = findAmount(raw.text || "");
   if (!found) return null;
   const merchant = (raw.title || "").trim() || "Unknown merchant";
-  const ts = typeof raw.ts === "number" && raw.ts > 0 ? raw.ts : now;
+  const rawTs = typeof raw.ts === "number" && raw.ts > 0 ? raw.ts : undefined;
+  // Accept either seconds ({system_time}) or milliseconds ({system_time_ms}).
+  let ts = rawTs ?? now;
+  if (ts < 1e12) ts *= 1000;
   const date = toISODate(new Date(ts));
   const merchantKey = merchantKeyOf(merchant);
   // Stable across re-imports: same notification -> same fingerprint. Uses the
   // notification's own timestamp when the macro provides one.
-  const stamp = typeof raw.ts === "number" && raw.ts > 0 ? String(raw.ts) : date;
+  const stamp = rawTs !== undefined ? String(ts) : date;
   const fingerprint = `${stamp}|${merchantKey}|${found.currency}${found.amount.toFixed(2)}`;
   return {
     fingerprint,
@@ -105,12 +108,19 @@ export function parseCapture(raw: RawCapture, now = Date.now()): ParsedTxn | nul
   };
 }
 
-/** Parse one inbox file line (JSON object, tab-separated, or plain text). */
+/**
+ * Parse one inbox file line into a transaction. Accepts several macro output
+ * shapes so setup is forgiving:
+ *   - pipe/tab-separated:  `ts|title|text`  or  `title|text`  (recommended)
+ *   - JSON object:         `{"ts":..,"title":"..","text":".."}`
+ *   - plain text:          amount is still extracted; merchant unknown
+ */
 export function parseInboxLine(line: string, now = Date.now()): ParsedTxn | null {
   const trimmed = line.trim();
   if (!trimmed) return null;
   let raw: RawCapture | null = null;
-  if (trimmed.startsWith("{")) {
+
+  if (trimmed.startsWith("{") && trimmed.includes('"text"')) {
     try {
       const obj = JSON.parse(trimmed) as Record<string, unknown>;
       raw = {
@@ -122,10 +132,19 @@ export function parseInboxLine(line: string, now = Date.now()): ParsedTxn | null
       raw = null;
     }
   }
-  if (!raw && trimmed.includes("\t")) {
-    const [title, ...rest] = trimmed.split("\t");
-    raw = { title, text: rest.join(" ") };
+
+  if (!raw) {
+    const delim = trimmed.includes("|") ? "|" : trimmed.includes("\t") ? "\t" : null;
+    if (delim) {
+      const parts = trimmed.split(delim).map((s) => s.trim());
+      if (/^\d{9,}$/.test(parts[0])) {
+        raw = { ts: Number(parts[0]), title: parts[1] ?? "", text: parts.slice(2).join(" ") };
+      } else {
+        raw = { title: parts[0], text: parts.slice(1).join(" ") };
+      }
+    }
   }
+
   if (!raw) raw = { title: "", text: trimmed };
   return parseCapture(raw, now);
 }
