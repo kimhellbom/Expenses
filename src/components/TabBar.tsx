@@ -20,7 +20,9 @@ export function TabBar({
         <button
           key={t.id}
           className={`tab ${active === t.id ? "tab-active" : ""}`}
-          onClick={() => onChange(t.id)}
+          // pointerdown (not click) so the screen switches the instant the
+          // finger lands — removes the perceived navigation lag.
+          onPointerDown={() => onChange(t.id)}
           aria-current={active === t.id}
         >
           <span className="tab-icon" aria-hidden>

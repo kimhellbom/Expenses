@@ -167,56 +167,58 @@ export function ExpenseForm({
   if (floating) {
     return (
       <div className="add-flow">
-        {step === "amount" ? (
-          <>
-            {currencyToggle}
-            <div className="add-spacer" />
-            <div className="add-panel">
-              <AmountKeypad digits={digits} currency={currency} onChange={setDigits} />
-              {fxLine}
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary add-cta"
-              disabled={!amountEntered}
-              onClick={() => setStep("category")}
-            >
-              Next →
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="add-back"
-              onClick={() => setStep("amount")}
-              aria-label="Back to amount"
-            >
-              ← {CURRENCY_SYMBOL[currency]}
-              {penceToAmount(digits).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-              {needsRate && Number.isFinite(gbp) ? ` · £${gbp.toFixed(2)}` : ""}
-            </button>
-            <div className="add-panel add-panel-scroll">
+        <div className="add-step" key={step}>
+          {step === "amount" ? (
+            <>
+              {currencyToggle}
+              <div className="add-spacer" />
+              <div className="add-panel">
+                <AmountKeypad digits={digits} currency={currency} onChange={setDigits} />
+                {fxLine}
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary add-cta"
+                disabled={!amountEntered}
+                onClick={() => setStep("category")}
+              >
+                Next →
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="add-back"
+                onClick={() => setStep("amount")}
+                aria-label="Back to amount"
+              >
+                ← {CURRENCY_SYMBOL[currency]}
+                {penceToAmount(digits).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+                {needsRate && Number.isFinite(gbp) ? ` · £${gbp.toFixed(2)}` : ""}
+              </button>
+              {detailsFields}
+              {/* Spacer pushes the grid + CTA into the lower, thumb-reachable half. */}
+              <div className="add-spacer" />
               <CategoryGrid
                 categories={categories}
                 selectedId={categoryId}
                 onSelect={setCategoryId}
               />
-              {detailsFields}
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary add-cta"
-              disabled={!canSave}
-              onClick={handleSave}
-            >
-              <span aria-hidden>✓ </span>Add expense
-            </button>
-          </>
-        )}
+              <button
+                type="button"
+                className="btn btn-primary add-cta"
+                disabled={!canSave}
+                onClick={handleSave}
+              >
+                <span aria-hidden>✓ </span>Add expense
+              </button>
+            </>
+          )}
+        </div>
       </div>
     );
   }
