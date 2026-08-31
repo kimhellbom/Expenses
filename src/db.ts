@@ -1,5 +1,11 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Category, Expense, FxCache } from "./types";
+import {
+  autoExpenseId,
+  ingestLines,
+  type PendingTxn,
+} from "./capture";
+import { convertToGBP, rateFor, round2 } from "./fx";
 
 // Local-only IndexedDB. No server, no sync — adding an expense works fully
 // offline because everything is written straight to the device.
@@ -168,6 +174,149 @@ export function getFxCache(): Promise<FxCache | undefined> {
   return getMeta<FxCache>(FX_CACHE_KEY);
 }
 
+// --- Auto-capture (merchant memory + import inbox) ------------------------
+
+const MERCHANT_RULES_KEY = "merchantRules";
+const PENDING_KEY = "capturePending";
+const CAPTURED_KEYS_KEY = "captureCapturedKeys";
+
+/** merchantKey -> categoryId. The learned "auto-file" memory. */
+export async function getMerchantRules(): Promise<Record<string, string>> {
+  return (await getMeta<Record<string, string>>(MERCHANT_RULES_KEY)) ?? {};
+}
+
+export async function setMerchantRule(merchantKey: string, categoryId: string): Promise<void> {
+  const rules = await getMerchantRules();
+  rules[merchantKey] = categoryId;
+  await setMeta(MERCHANT_RULES_KEY, rules);
+}
+
+export async function removeMerchantRule(merchantKey: string): Promise<void> {
+  const rules = await getMerchantRules();
+  delete rules[merchantKey];
+  await setMeta(MERCHANT_RULES_KEY, rules);
+}
+
+export async function getPending(): Promise<PendingTxn[]> {
+  return (await getMeta<PendingTxn[]>(PENDING_KEY)) ?? [];
+}
+
+async function setPending(items: PendingTxn[]): Promise<void> {
+  await setMeta(PENDING_KEY, items);
+}
+
+async function getCapturedKeys(): Promise<string[]> {
+  return (await getMeta<string[]>(CAPTURED_KEYS_KEY)) ?? [];
+}
+
+async function setCapturedKeys(keys: string[]): Promise<void> {
+  await setMeta(CAPTURED_KEYS_KEY, keys);
+}
+
+export interface ImportSummary {
+  added: number;
+  pending: number;
+  duplicates: number;
+  failed: number;
+  pendingTotal: number;
+}
+
+/**
+ * Import raw inbox lines: auto-file known merchants (with a usable FX rate),
+ * queue the rest for review. Deduplicates against what's already been captured.
+ */
+export async function importInbox(lines: string[]): Promise<ImportSummary> {
+  const [rules, capturedKeys, pending, cats, fxCache] = await Promise.all([
+    getMerchantRules(),
+    getCapturedKeys(),
+    getPending(),
+    getCategories(),
+    getFxCache(),
+  ]);
+  const res = ingestLines({
+    lines,
+    merchantRules: rules,
+    capturedKeys,
+    pending,
+    fxCache,
+    categoryIds: new Set(cats.map((c) => c.id)),
+    now: Date.now(),
+  });
+
+  if (res.autoAdded.length) {
+    const db = await getDB();
+    const tx = db.transaction("expenses", "readwrite");
+    for (const e of res.autoAdded) void tx.store.put(e);
+    await tx.done;
+    const prefix = "auto:".length;
+    await setCapturedKeys([
+      ...capturedKeys,
+      ...res.autoAdded.map((e) => e.id.slice(prefix)),
+    ]);
+  }
+  if (res.newPending.length) {
+    await setPending([...pending, ...res.newPending]);
+  }
+  return {
+    added: res.autoAdded.length,
+    pending: res.newPending.length,
+    duplicates: res.duplicates,
+    failed: res.failed,
+    pendingTotal: pending.length + res.newPending.length,
+  };
+}
+
+/**
+ * Resolve a pending capture into an expense under `categoryId`. When `remember`
+ * is set, every future transaction from this merchant auto-files to the same
+ * category (no review needed).
+ */
+export async function resolvePending(
+  fingerprint: string,
+  categoryId: string,
+  remember: boolean,
+): Promise<void> {
+  const pending = await getPending();
+  const item = pending.find((p) => p.fingerprint === fingerprint);
+  if (!item) return;
+
+  const fxCache = await getFxCache();
+  const rate = rateFor(item.currency, fxCache);
+  let gbp = rate !== undefined ? convertToGBP(item.amount, item.currency, rate) : NaN;
+  let fxRate = item.currency === "GBP" ? 1 : (rate ?? NaN);
+  if (!Number.isFinite(gbp)) {
+    // No rate available at all (offline, never cached): store face value so the
+    // row isn't lost; it can be corrected later from History.
+    gbp = round2(item.amount);
+    fxRate = Number.isFinite(fxRate) ? fxRate : 1;
+  }
+
+  const expense: Expense = {
+    id: autoExpenseId(fingerprint),
+    amountGBP: gbp,
+    originalAmount: round2(item.amount),
+    originalCurrency: item.currency,
+    fxRate,
+    categoryId,
+    note: "",
+    date: item.date,
+    createdAt: item.ts,
+    merchant: item.merchant,
+    source: "auto",
+  };
+  await saveExpense(expense);
+  await setPending(pending.filter((p) => p.fingerprint !== fingerprint));
+  await setCapturedKeys([...(await getCapturedKeys()), fingerprint]);
+  if (remember) await setMerchantRule(item.merchantKey, categoryId);
+}
+
+/** Discard a pending capture without creating an expense. */
+export async function dismissPending(fingerprint: string): Promise<void> {
+  const pending = await getPending();
+  await setPending(pending.filter((p) => p.fingerprint !== fingerprint));
+  await setCapturedKeys([...(await getCapturedKeys()), fingerprint]);
+}
+
 // --- Backup (export / import) --------------------------------------------
 
 export interface Backup {
@@ -176,6 +325,8 @@ export interface Backup {
   exportedAt: string;
   categories: Category[];
   expenses: Expense[];
+  /** Learned merchant -> category memory (optional; added later). */
+  merchantRules?: Record<string, string>;
 }
 
 export async function exportBackup(): Promise<Backup> {
@@ -185,6 +336,7 @@ export async function exportBackup(): Promise<Backup> {
     exportedAt: new Date().toISOString(),
     categories: await getCategories(true),
     expenses: await getExpenses(),
+    merchantRules: await getMerchantRules(),
   };
 }
 
@@ -200,4 +352,5 @@ export async function importBackup(data: Backup): Promise<void> {
   for (const c of data.categories ?? []) tx.objectStore("categories").put(c);
   for (const e of data.expenses) tx.objectStore("expenses").put(e);
   await tx.done;
+  if (data.merchantRules) await setMeta(MERCHANT_RULES_KEY, data.merchantRules);
 }

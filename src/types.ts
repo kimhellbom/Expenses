@@ -33,6 +33,10 @@ export interface Expense {
   date: string;
   /** Creation timestamp, epoch ms. */
   createdAt: number;
+  /** Raw merchant descriptor when auto-captured (e.g. "KARAGIANNIS IOANNI"). */
+  merchant?: string;
+  /** How the expense was created. Absent = manual (legacy rows). */
+  source?: "manual" | "auto";
 }
 
 /** Cached foreign-exchange rates: units of currency per 1 GBP. */

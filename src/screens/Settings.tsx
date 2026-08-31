@@ -1,22 +1,55 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../store";
 import {
   addCategory,
   exportBackup,
+  getMerchantRules,
   importBackup,
+  importInbox,
   removeCategory,
+  removeMerchantRule,
   saveCategory,
   type Backup,
 } from "../db";
 import type { Category } from "../types";
 
-export function Settings() {
-  const { categories, fxCache, fxStatus, fxError, reload, reloadRates, online } =
+export function Settings({ onReview }: { onReview: () => void }) {
+  const { categories, pending, fxCache, fxStatus, fxError, reload, reloadRates, online } =
     useStore();
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const inboxInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [rules, setRules] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    void getMerchantRules().then(setRules);
+  }, []);
+
+  const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? "—";
+
+  async function handleImportInbox(file: File) {
+    try {
+      const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
+      const res = await importInbox(lines);
+      await reload();
+      setRules(await getMerchantRules());
+      const parts: string[] = [];
+      if (res.added) parts.push(`${res.added} auto-filed`);
+      if (res.pending) parts.push(`${res.pending} to review`);
+      if (res.duplicates) parts.push(`${res.duplicates} already imported`);
+      if (res.failed) parts.push(`${res.failed} unreadable`);
+      setMessage(parts.length ? `Imported — ${parts.join(", ")}.` : "No new transactions found.");
+    } catch (err) {
+      setMessage(`Import failed: ${(err as Error).message}`);
+    }
+  }
+
+  async function forgetMerchant(key: string) {
+    await removeMerchantRule(key);
+    setRules(await getMerchantRules());
+  }
 
   async function handleAdd() {
     if (!newName.trim()) return;
@@ -79,6 +112,88 @@ export function Settings() {
       </header>
 
       {message && <p className="banner">{message}</p>}
+
+      <section className="card">
+        <h2>Auto-capture</h2>
+        <p className="muted">
+          Log expenses straight from your Google Wallet payment notifications — no
+          typing. Import the file your MacroDroid macro writes; known merchants file
+          themselves, new ones you tag once and they're remembered.
+        </p>
+        {pending.length > 0 && (
+          <button type="button" className="btn btn-primary" onClick={onReview}>
+            Review {pending.length} pending
+          </button>
+        )}
+        <div className="backup-actions">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => inboxInput.current?.click()}
+          >
+            Import transactions
+          </button>
+          <input
+            ref={inboxInput}
+            type="file"
+            accept=".jsonl,.json,.txt,text/plain,application/json"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleImportInbox(f);
+              e.target.value = "";
+            }}
+          />
+        </div>
+
+        {Object.keys(rules).length > 0 && (
+          <div className="merchant-memory">
+            <h3>Remembered merchants</h3>
+            <ul className="cat-edit-list">
+              {Object.entries(rules).map(([key, catId]) => (
+                <li key={key} className="merchant-row">
+                  <span className="merchant-name">{key}</span>
+                  <span className="merchant-cat">{catName(catId)}</span>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label={`Forget ${key}`}
+                    onClick={() => void forgetMerchant(key)}
+                  >
+                    🗑
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <details className="setup-guide">
+          <summary>Set up auto-capture (one-time)</summary>
+          <ol className="setup-steps">
+            <li>Install <strong>MacroDroid</strong> from the Play Store (free).</li>
+            <li>
+              New macro → <strong>Trigger</strong>: Device Events → “Notification
+              Received” → select <strong>Google Wallet</strong>.
+            </li>
+            <li>
+              <strong>Action</strong>: Files → “Write to File”, set to{" "}
+              <strong>Append</strong> to a file like{" "}
+              <code>Documents/expenses-inbox.jsonl</code>, with content:
+              <code className="setup-code">
+                {'{"ts":[timestamp],"title":"[notification_title]","text":"[notification_text]"}'}
+              </code>
+              (pick each <code>[...]</code> from MacroDroid's magic-text list; a
+              trailing newline per entry).
+            </li>
+            <li>Grant MacroDroid notification access when prompted.</li>
+            <li>
+              Pay as normal, then back here tap <strong>Import transactions</strong>{" "}
+              and choose that file. Nothing leaves your phone.
+            </li>
+          </ol>
+        </details>
+      </section>
 
       <section className="card">
         <h2>Categories</h2>
