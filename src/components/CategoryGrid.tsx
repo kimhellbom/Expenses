@@ -1,7 +1,8 @@
+import { memo } from "react";
 import type { Category } from "../types";
 
 // Money-Manager-style grid of emoji tiles for fast category selection.
-export function CategoryGrid({
+export const CategoryGrid = memo(function CategoryGrid({
   categories,
   selectedId,
   onSelect,
@@ -27,4 +28,4 @@ export function CategoryGrid({
       ))}
     </div>
   );
-}
+});
