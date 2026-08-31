@@ -35,6 +35,16 @@ export function Settings({ onReview }: { onReview: () => void }) {
       const res = await importInbox(lines);
       await reload();
       setRules(await getMerchantRules());
+      // Detect the classic MacroDroid mistake: variable names written literally.
+      const unfilled = lines.some((l) =>
+        /\[(not_title|notification|system_time_ms|notification_title|notification_text|timestamp)\]/.test(l),
+      );
+      if (unfilled && res.added + res.pending === 0) {
+        setMessage(
+          "Those lines still show the MacroDroid variable names (e.g. [not_title]) instead of real values. In the macro's Write-to-File content, insert each value from the magic-text ({ }) button rather than typing it, then pay again.",
+        );
+        return;
+      }
       const parts: string[] = [];
       if (res.added) parts.push(`${res.added} auto-filed`);
       if (res.pending) parts.push(`${res.pending} to review`);
@@ -179,12 +189,14 @@ export function Settings({ onReview }: { onReview: () => void }) {
             <li>
               <strong>Action</strong>: Files → “Write to File”, set to{" "}
               <strong>Append</strong> to a file like{" "}
-              <code>Documents/expenses-inbox.jsonl</code>, with content:
+              <code>Documents/expenses-inbox.txt</code>, with content:
               <code className="setup-code">
-                {'{"ts":[timestamp],"title":"[notification_title]","text":"[notification_text]"}'}
+                {'{"ts":[system_time_ms],"title":"[not_title]","text":"[notification]"}'}
               </code>
-              (pick each <code>[...]</code> from MacroDroid's magic-text list; a
-              trailing newline per entry).
+              <strong>Insert each <code>[…]</code> value from the magic-text
+              button</strong> (the <code>{"{ }"}</code> icon) — don't type them, or
+              MacroDroid writes the names literally instead of the values. Enable
+              “Add new line” so each entry is on its own line.
             </li>
             <li>Grant MacroDroid notification access when prompted.</li>
             <li>
