@@ -37,11 +37,11 @@ export function Settings({ onReview }: { onReview: () => void }) {
       setRules(await getMerchantRules());
       // Detect the classic MacroDroid mistake: variable names written literally.
       const unfilled = lines.some((l) =>
-        /\[(not_title|notification|system_time_ms|notification_title|notification_text|timestamp)\]/.test(l),
+        /[[{](not_title|notification|system_time_ms|system_time|notification_title|notification_text|timestamp)[\]}]/.test(l),
       );
       if (unfilled && res.added + res.pending === 0) {
         setMessage(
-          "Those lines still show the MacroDroid variable names (e.g. [not_title]) instead of real values. In the macro's Write-to-File content, insert each value from the magic-text ({ }) button rather than typing it, then pay again.",
+          "Those lines still show the MacroDroid variable names (e.g. {not_title}) instead of real values. In the macro's Write-to-File text, insert each value from the magic-text (…) button rather than typing it, then pay again.",
         );
         return;
       }
@@ -187,16 +187,15 @@ export function Settings({ onReview }: { onReview: () => void }) {
               Received” → select <strong>Google Wallet</strong>.
             </li>
             <li>
-              <strong>Action</strong>: Files → “Write to File”, set to{" "}
-              <strong>Append</strong> to a file like{" "}
-              <code>Documents/expenses-inbox.txt</code>, with content:
-              <code className="setup-code">
-                {'{"ts":[system_time_ms],"title":"[not_title]","text":"[notification]"}'}
-              </code>
-              <strong>Insert each <code>[…]</code> value from the magic-text
-              button</strong> (the <code>{"{ }"}</code> icon) — don't type them, or
-              MacroDroid writes the names literally instead of the values. Enable
-              “Add new line” so each entry is on its own line.
+              <strong>Action</strong>: Files → “Write to File” → <strong>All File
+              Access</strong>, folder <code>Documents</code>, filename{" "}
+              <code>expenses-inbox.txt</code>, mode <strong>Append</strong>, and in
+              the text field enter (with a leading <code>{"\\n"}</code>):
+              <code className="setup-code">{"{system_time_ms}|{not_title}|{notification}"}</code>
+              <strong>Insert each <code>{"{…}"}</code> from the magic-text button</strong>{" "}
+              (the <code>…</code> beside the field) — pick <em>System time (ms)</em>,{" "}
+              <em>Notification Title</em>, <em>Notification</em> — and type the{" "}
+              <code>|</code> bars between them yourself.
             </li>
             <li>Grant MacroDroid notification access when prompted.</li>
             <li>
