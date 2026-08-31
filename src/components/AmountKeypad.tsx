@@ -56,7 +56,10 @@ export const AmountKeypad = memo(function AmountKeypad({
     <div className="keypad">
       <div className="keypad-display">
         <span className="keypad-symbol">{CURRENCY_SYMBOL[currency]}</span>
-        <span className="keypad-value">{formatPence(digits)}</span>
+        {/* key re-mounts the span on each change so the pop animation replays. */}
+        <span className="keypad-value" key={digits}>
+          {formatPence(digits)}
+        </span>
       </div>
       <div className="keypad-grid">
         {KEYS.map((k) => (

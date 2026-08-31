@@ -1,15 +1,46 @@
+/* Light palette is the default; dark is applied via prefers-color-scheme so the
+   app follows the system setting. Colours are referenced through variables so
+   both themes share one set of rules. */
 :root {
-  --bg: #0b1220;
-  --surface: #111a2b;
-  --surface-2: #1b2740;
-  --line: #243049;
-  --text: #e8edf6;
-  --muted: #9aa6bd;
-  --accent: #14b8a6;
-  --accent-press: #0f766e;
-  --danger: #ef4444;
+  color-scheme: light;
+  --bg: #f4f5fb;
+  --surface: #ffffff;
+  --surface-2: #eceef8;
+  --line: #e3e6f1;
+  --text: #191c28;
+  --muted: #6b7286;
+  --accent: #6366f1;
+  --accent-press: #4f46e5;
+  --accent-soft: rgba(99, 102, 241, 0.12);
+  --accent-grad: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --on-accent: #ffffff;
+  --danger: #e5484d;
+  --warn: #b45309;
+  --warn-soft: rgba(180, 83, 9, 0.12);
+  --shadow: 0 1px 2px rgba(35, 40, 70, 0.06), 0 4px 16px rgba(35, 40, 70, 0.06);
   --radius: 14px;
   --tabbar-h: 64px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #0f1421;
+    --surface: #161d2d;
+    --surface-2: #212a40;
+    --line: #2b3450;
+    --text: #e9edf7;
+    --muted: #98a2ba;
+    --accent: #7c85ff;
+    --accent-press: #6366f1;
+    --accent-soft: rgba(124, 133, 255, 0.16);
+    --accent-grad: linear-gradient(135deg, #7c85ff, #a78bfa);
+    --on-accent: #0b1020;
+    --danger: #ff6169;
+    --warn: #fbbf24;
+    --warn-soft: rgba(251, 191, 36, 0.15);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.35);
+  }
 }
 
 * {
@@ -125,6 +156,13 @@ select,
 .tab-icon {
   font-size: 20px;
   line-height: 1;
+  transition: transform 0.12s ease;
+}
+.tab-active .tab-icon {
+  transform: scale(1.12);
+}
+.tab:active .tab-icon {
+  transform: scale(0.86);
 }
 .tab-label {
   font-size: 11px;
@@ -137,14 +175,21 @@ select,
   padding: 14px 18px;
   font-weight: 600;
   cursor: pointer;
+  transition: transform 0.08s ease, filter 0.15s ease, opacity 0.15s ease;
+}
+.btn:active {
+  transform: scale(0.97);
 }
 .btn-primary {
-  background: var(--accent);
-  color: #04201c;
+  background: var(--accent-grad);
+  color: var(--on-accent);
+  box-shadow: 0 4px 14px var(--accent-soft);
 }
 .btn-primary:disabled {
   background: var(--surface-2);
   color: var(--muted);
+  box-shadow: none;
+  transform: none;
 }
 .btn-ghost {
   background: var(--surface-2);
@@ -170,6 +215,7 @@ select,
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 14px;
+  box-shadow: var(--shadow);
 }
 .currency-toggle {
   display: flex;
@@ -186,8 +232,8 @@ select,
   color: var(--muted);
 }
 .cur-btn-active {
-  background: var(--accent-press);
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
   border-color: var(--accent);
 }
 /* On-screen numeric keypad */
@@ -207,6 +253,16 @@ select,
   font-size: 46px;
   font-weight: 700;
   line-height: 1;
+  /* Re-keyed on every digit change (see AmountKeypad) so this replays. */
+  animation: value-pop 0.13s ease-out;
+}
+@keyframes value-pop {
+  from {
+    transform: scale(1.13);
+  }
+  to {
+    transform: scale(1);
+  }
 }
 .keypad-grid {
   display: grid;
@@ -222,10 +278,12 @@ select,
   padding: 16px 0;
   cursor: pointer;
   user-select: none;
+  transition: transform 0.05s ease, background 0.1s ease, color 0.1s ease;
 }
 .keypad-key:active {
-  background: var(--accent-press);
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
+  transform: scale(0.93);
 }
 .keypad-back {
   font-size: 22px;
@@ -260,8 +318,26 @@ select,
   min-height: 0; /* let the scrollable step-2 panel shrink to fit */
   display: flex;
   flex-direction: column;
-  gap: 12px;
   padding-top: 6px;
+}
+/* One wrapper per step, re-keyed on step change so it slides in. */
+.add-step {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: step-in 0.2s ease;
+}
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 /* Pushes the keypad + CTA down into the lower, thumb-reachable half. */
 .add-spacer {
@@ -315,7 +391,7 @@ select,
   font-weight: 600;
 }
 .fx-warn {
-  color: #fbbf24;
+  color: var(--warn);
 }
 .fx-details {
   margin-top: 6px;
@@ -387,11 +463,29 @@ select,
   gap: 6px;
   cursor: pointer;
   min-height: 78px;
+  box-shadow: var(--shadow);
+  transition: transform 0.09s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.cat-tile:active {
+  transform: scale(0.96);
 }
 .cat-tile-active {
   border-color: var(--accent);
-  background: var(--accent-press);
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 4px 14px var(--accent-soft);
+  animation: tile-pop 0.18s ease-out;
+}
+@keyframes tile-pop {
+  0% {
+    transform: scale(0.9);
+  }
+  55% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 .cat-emoji {
   font-size: 24px;
@@ -417,12 +511,12 @@ select,
   border-radius: 999px;
 }
 .net-on {
-  background: rgba(20, 184, 166, 0.15);
+  background: var(--accent-soft);
   color: var(--accent);
 }
 .net-off {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
+  background: var(--warn-soft);
+  color: var(--warn);
 }
 .empty {
   color: var(--muted);
@@ -462,6 +556,7 @@ select,
   border: 1px solid var(--line);
   border-radius: 12px;
   overflow: hidden;
+  box-shadow: var(--shadow);
 }
 .entry-main {
   flex: 1;
@@ -519,6 +614,7 @@ select,
   border-radius: 12px;
   padding: 8px 12px;
   margin-bottom: 16px;
+  box-shadow: var(--shadow);
 }
 .month-nav button {
   background: var(--surface-2);
@@ -590,6 +686,7 @@ select,
   border-radius: var(--radius);
   padding: 14px;
   margin-bottom: 16px;
+  box-shadow: var(--shadow);
 }
 .card h2 {
   margin: 0 0 12px;
@@ -631,4 +728,31 @@ select,
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+/* ---- Motion ---- */
+/* Screens remount on tab change, so this plays on every navigation. */
+.page,
+.add-screen {
+  animation: screen-in 0.18s ease;
+}
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
