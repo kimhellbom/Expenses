@@ -64,6 +64,22 @@ describe("parseInboxLine", () => {
     expect(p.currency).toBe("GBP");
     expect(p.amount).toBe(3.2);
   });
+  it("reads a pipe-separated line with a ms timestamp", () => {
+    const p = parseInboxLine("1756590300000|KARAGIANNIS IOANNI|€7.50 with Barclaycard")!;
+    expect(p.merchant).toBe("KARAGIANNIS IOANNI");
+    expect(p.amount).toBe(7.5);
+    expect(p.currency).toBe("EUR");
+    expect(p.ts).toBe(1756590300000);
+  });
+  it("normalises a seconds timestamp to milliseconds", () => {
+    const p = parseInboxLine("1756590300|Shop|£5.00 with card")!;
+    expect(p.ts).toBe(1756590300000);
+  });
+  it("reads a pipe line with no timestamp", () => {
+    const p = parseInboxLine("Costa|£2.40 with card")!;
+    expect(p.merchant).toBe("Costa");
+    expect(p.amount).toBe(2.4);
+  });
   it("skips blank lines", () => {
     expect(parseInboxLine("   ")).toBeNull();
   });
