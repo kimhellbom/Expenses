@@ -6,11 +6,13 @@ import React, {
   useState,
 } from "react";
 import type { Category, Expense, FxCache } from "./types";
+import type { PendingTxn } from "./capture";
 import {
   ensureSeeded,
   getCategories,
   getExpenses,
   getFxCache,
+  getPending,
 } from "./db";
 import { refreshRates } from "./fx";
 
@@ -20,11 +22,13 @@ interface Store {
   ready: boolean;
   categories: Category[];
   expenses: Expense[];
+  /** Auto-captured transactions awaiting a category. */
+  pending: PendingTxn[];
   fxCache?: FxCache;
   fxStatus: FxStatus;
   fxError?: string;
   online: boolean;
-  /** Reload categories + expenses from IndexedDB. */
+  /** Reload categories + expenses + pending captures from IndexedDB. */
   reload: () => Promise<void>;
   /** Re-fetch FX rates (falls back to cache when offline). */
   reloadRates: () => Promise<void>;
@@ -36,6 +40,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [pending, setPending] = useState<PendingTxn[]>([]);
   const [fxCache, setFxCache] = useState<FxCache | undefined>();
   const [fxStatus, setFxStatus] = useState<FxStatus>("idle");
   const [fxError, setFxError] = useState<string | undefined>();
@@ -44,9 +49,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const reload = useCallback(async () => {
-    const [cats, exps] = await Promise.all([getCategories(), getExpenses()]);
+    const [cats, exps, pend] = await Promise.all([
+      getCategories(),
+      getExpenses(),
+      getPending(),
+    ]);
     setCategories(cats);
     setExpenses(exps);
+    setPending(pend);
   }, []);
 
   const reloadRates = useCallback(async () => {
@@ -94,6 +104,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     ready,
     categories,
     expenses,
+    pending,
     fxCache,
     fxStatus,
     fxError,
