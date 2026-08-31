@@ -28,19 +28,23 @@ From the Play Store (free tier is enough — this needs one macro).
 - (Optional) restrict to notifications that contain "with" so only payments fire.
 
 **Add Action → Files → "Write to File"**
-- File: `Documents/expenses-inbox.jsonl` (any folder you can find in Files)
+- File: `Documents/expenses-inbox.txt` (any folder you can find in Files)
 - Mode: **Append** (not overwrite)
-- Add a **newline** after each entry (enable "Add new line", or end the content with `\n`)
-- Content — insert MacroDroid's magic-text variables where shown:
+- Enable **"Add new line"** so each entry is on its own line
+- Content:
 
 ```json
-{"ts":[timestamp],"title":"[notification_title]","text":"[notification_text]"}
+{"ts":[system_time_ms],"title":"[not_title]","text":"[notification]"}
 ```
 
-Use the `{x}` magic-text button to pick:
-- `[timestamp]` → the notification time in milliseconds (optional but recommended — it makes de-duplication exact)
-- `[notification_title]` → the merchant
-- `[notification_text]` → the "€7.50 with …" line
+> **Important:** insert each `[…]` value from the **magic-text button** (the
+> `{ }` icon in the content field) — do **not** type them. If you type the
+> names, MacroDroid writes them literally (`[not_title]`) instead of the value.
+
+The correct MacroDroid tokens are:
+- `[system_time_ms]` → notification time in milliseconds (makes de-duplication exact)
+- `[not_title]` → the merchant (notification title)
+- `[notification]` → the notification message, e.g. "€7.50 with Barclaycard …"
 
 Save the macro.
 
@@ -52,7 +56,7 @@ permission stays on your device.
 ### 4. Import in the app
 
 Pay as normal a few times, then open **Expenses → Settings → Auto-capture →
-Import transactions** and pick `expenses-inbox.jsonl`.
+Import transactions** and pick `expenses-inbox.txt`.
 
 - Merchants you've tagged before are **filed automatically**.
 - New merchants appear under **Review** — tap a category once (leave "Remember"
@@ -86,8 +90,11 @@ Re-importing the same file is safe: already-imported transactions are skipped.
 
 - **"No new transactions found."** The file was empty or every line was already
   imported. Check the macro's file path and that it's set to **Append**.
-- **"N unreadable."** A line had no recognisable amount — check the content
-  template uses `[notification_text]`.
+- **Lines show `[not_title]` / `[notification]` literally.** MacroDroid didn't
+  substitute the variables — you typed them instead of inserting them from the
+  magic-text (`{ }`) button. Fix the macro's content, then pay again.
+- **"N unreadable."** A line had no recognisable amount — check the content uses
+  the `[notification]` token for the message.
 - **Wrong currency/amount.** The notification text was unusual; edit the expense
   in History, or adjust the macro to include the amount line.
 - **A merchant files to the wrong category.** Remove it under **Settings →
