@@ -4,6 +4,7 @@ import {
   parseAmountToken,
   parseCapture,
   parseInboxLine,
+  splitInboxText,
   type PendingTxn,
 } from "./capture";
 import type { FxCache } from "./types";
@@ -49,6 +50,22 @@ describe("parseCapture", () => {
   });
   it("gives the same fingerprint for the same notification", () => {
     expect(parseCapture(WALLET_EUR)!.fingerprint).toBe(parseCapture(WALLET_EUR)!.fingerprint);
+  });
+});
+
+describe("splitInboxText", () => {
+  it("separates JSON objects glued together without newlines", () => {
+    const glued =
+      '{"ts":1788252270346,"title":"Preparing your receipt","text":"We\'re adding the location"}' +
+      '{"ts":1788252274017,"title":"K KOTSANITIS P TZIMI K","text":"€5.00 with Barclaycard ••0005"}';
+    const lines = splitInboxText(glued);
+    expect(lines).toHaveLength(2);
+    const parsed = lines.map((l) => parseInboxLine(l));
+    // The receipt line has no amount and is skipped; the payment parses.
+    expect(parsed[0]).toBeNull();
+    expect(parsed[1]!.merchant).toBe("K KOTSANITIS P TZIMI K");
+    expect(parsed[1]!.amount).toBe(5);
+    expect(parsed[1]!.currency).toBe("EUR");
   });
 });
 
