@@ -109,6 +109,19 @@ export function parseCapture(raw: RawCapture, now = Date.now()): ParsedTxn | nul
 }
 
 /**
+ * Split raw inbox file text into individual entry lines. Tolerates a macro that
+ * forgot per-entry newlines by also breaking apart concatenated JSON objects
+ * (`}{` -> `}` / `{`).
+ */
+export function splitInboxText(text: string): string[] {
+  return text
+    .replace(/\}\s*\{/g, "}\n{")
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
  * Parse one inbox file line into a transaction. Accepts several macro output
  * shapes so setup is forgiving:
  *   - pipe/tab-separated:  `ts|title|text`  or  `title|text`  (recommended)

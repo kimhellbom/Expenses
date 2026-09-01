@@ -11,6 +11,7 @@ import {
   saveCategory,
   type Backup,
 } from "../db";
+import { splitInboxText } from "../capture";
 import type { Category } from "../types";
 
 export function Settings({ onReview }: { onReview: () => void }) {
@@ -31,7 +32,7 @@ export function Settings({ onReview }: { onReview: () => void }) {
 
   async function handleImportInbox(file: File) {
     try {
-      const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
+      const lines = splitInboxText(await file.text());
       const res = await importInbox(lines);
       await reload();
       setRules(await getMerchantRules());
@@ -45,11 +46,12 @@ export function Settings({ onReview }: { onReview: () => void }) {
         );
         return;
       }
+      // Non-payment notifications (e.g. Wallet's "preparing your receipt") have
+      // no amount and are silently ignored — not surfaced as errors.
       const parts: string[] = [];
       if (res.added) parts.push(`${res.added} auto-filed`);
       if (res.pending) parts.push(`${res.pending} to review`);
       if (res.duplicates) parts.push(`${res.duplicates} already imported`);
-      if (res.failed) parts.push(`${res.failed} unreadable`);
       setMessage(parts.length ? `Imported — ${parts.join(", ")}.` : "No new transactions found.");
     } catch (err) {
       setMessage(`Import failed: ${(err as Error).message}`);
