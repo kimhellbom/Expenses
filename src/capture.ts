@@ -45,6 +45,30 @@ export function merchantKeyOf(title: string): string {
 }
 
 /**
+ * Dedup fingerprint. Deliberately excludes the exact timestamp: Google Wallet
+ * re-posts a payment notification (payment time, then again when the receipt is
+ * updated), so the "same" transaction arrives with different timestamps. Keying
+ * on merchant + amount + calendar day collapses those. (Trade-off: two genuinely
+ * identical purchases at the same merchant on the same day merge into one — rare,
+ * and a real second one can be added manually.)
+ */
+export function fingerprintOf(
+  merchantKey: string,
+  currency: Currency,
+  amount: number,
+  date: string,
+): string {
+  return `${date}|${merchantKey}|${currency}${amount.toFixed(2)}`;
+}
+
+/** Tidy an ALL-CAPS merchant descriptor for display; leave mixed-case as-is. */
+export function prettyMerchant(name: string): string {
+  const n = name.trim();
+  if (/[a-z]/.test(n)) return n;
+  return n.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
  * Parse a money token like "7.50", "1,234.56" or "7,50" into a number.
  * Wallet uses a dot decimal; we defensively handle a comma decimal too.
  */
@@ -92,10 +116,7 @@ export function parseCapture(raw: RawCapture, now = Date.now()): ParsedTxn | nul
   if (ts < 1e12) ts *= 1000;
   const date = toISODate(new Date(ts));
   const merchantKey = merchantKeyOf(merchant);
-  // Stable across re-imports: same notification -> same fingerprint. Uses the
-  // notification's own timestamp when the macro provides one.
-  const stamp = rawTs !== undefined ? String(ts) : date;
-  const fingerprint = `${stamp}|${merchantKey}|${found.currency}${found.amount.toFixed(2)}`;
+  const fingerprint = fingerprintOf(merchantKey, found.currency, found.amount, date);
   return {
     fingerprint,
     merchant,
@@ -229,7 +250,7 @@ export function ingestLines(input: IngestInput): IngestResult {
         originalCurrency: parsed.currency,
         fxRate: parsed.currency === "GBP" ? 1 : (rate as number),
         categoryId: ruleCat,
-        note: "",
+        note: prettyMerchant(parsed.merchant),
         date: parsed.date,
         createdAt: parsed.ts,
         merchant: parsed.merchant,

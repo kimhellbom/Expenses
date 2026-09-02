@@ -4,6 +4,7 @@ import {
   parseAmountToken,
   parseCapture,
   parseInboxLine,
+  prettyMerchant,
   splitInboxText,
   type PendingTxn,
 } from "./capture";
@@ -102,6 +103,15 @@ describe("parseInboxLine", () => {
   });
 });
 
+describe("prettyMerchant", () => {
+  it("title-cases ALL-CAPS names", () => {
+    expect(prettyMerchant("KEA BREEZE MON IKE")).toBe("Kea Breeze Mon Ike");
+  });
+  it("leaves mixed-case names untouched", () => {
+    expect(prettyMerchant("Pret A Manger")).toBe("Pret A Manger");
+  });
+});
+
 describe("ingestLines", () => {
   const base = {
     merchantRules: {},
@@ -117,6 +127,25 @@ describe("ingestLines", () => {
     expect(r.autoAdded).toHaveLength(0);
     expect(r.newPending).toHaveLength(1);
     expect(r.newPending[0].merchant).toBe("KARAGIANNIS IOANNI");
+  });
+
+  it("collapses Wallet's duplicate re-posted notifications (same day, different ts)", () => {
+    // Same merchant + amount, timestamps ~66 min apart (payment, then receipt update).
+    const a = JSON.stringify({ ts: 1788292400692, title: "ENNEA KORES", text: "€45.75 with Barclaycard" });
+    const b = JSON.stringify({ ts: 1788296358029, title: "ENNEA KORES", text: "€45.75 with Barclaycard" });
+    const r = ingestLines({ ...base, lines: [a, b] });
+    expect(r.newPending).toHaveLength(1);
+    expect(r.duplicates).toBe(1);
+  });
+
+  it("writes the merchant into the note and tidies ALL-CAPS", () => {
+    const r = ingestLines({
+      ...base,
+      lines: [JSON.stringify({ title: "ENNEA KORES", text: "€45.75 with card" })],
+      merchantRules: { "ENNEA KORES": "cat-lunch" },
+    });
+    expect(r.autoAdded[0].note).toBe("Ennea Kores");
+    expect(r.autoAdded[0].merchant).toBe("ENNEA KORES");
   });
 
   it("auto-files a known merchant and converts to GBP", () => {
