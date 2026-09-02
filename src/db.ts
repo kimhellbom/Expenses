@@ -2,7 +2,10 @@ import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Category, Expense, FxCache } from "./types";
 import {
   autoExpenseId,
+  fingerprintOf,
   ingestLines,
+  merchantKeyOf,
+  prettyMerchant,
   type PendingTxn,
 } from "./capture";
 import { convertToGBP, rateFor, round2 } from "./fx";
@@ -226,17 +229,25 @@ export interface ImportSummary {
  * queue the rest for review. Deduplicates against what's already been captured.
  */
 export async function importInbox(lines: string[]): Promise<ImportSummary> {
-  const [rules, capturedKeys, pending, cats, fxCache] = await Promise.all([
+  const [rules, capturedKeys, pending, cats, fxCache, expenses] = await Promise.all([
     getMerchantRules(),
     getCapturedKeys(),
     getPending(),
     getCategories(),
     getFxCache(),
+    getExpenses(),
   ]);
+  // Also dedup against expenses already saved (robust even if capturedKeys is
+  // ever lost, or the fingerprint scheme changed under an existing row).
+  const existingKeys = expenses
+    .filter((e) => e.source === "auto" && e.merchant)
+    .map((e) =>
+      fingerprintOf(merchantKeyOf(e.merchant as string), e.originalCurrency, e.originalAmount, e.date),
+    );
   const res = ingestLines({
     lines,
     merchantRules: rules,
-    capturedKeys,
+    capturedKeys: [...capturedKeys, ...existingKeys],
     pending,
     fxCache,
     categoryIds: new Set(cats.map((c) => c.id)),
@@ -298,7 +309,7 @@ export async function resolvePending(
     originalCurrency: item.currency,
     fxRate,
     categoryId,
-    note: "",
+    note: prettyMerchant(item.merchant),
     date: item.date,
     createdAt: item.ts,
     merchant: item.merchant,
