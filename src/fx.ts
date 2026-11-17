@@ -9,8 +9,8 @@ import { FX_CACHE_KEY, getFxCache, setMeta } from "./db";
 // api.frankfurter.app is the legacy host kept as a fallback. We try each in
 // order so a single host being down doesn't break conversion.
 const FRANKFURTER_URLS = [
-  "https://api.frankfurter.dev/v1/latest?base=GBP&symbols=EUR,TRY",
-  "https://api.frankfurter.app/latest?base=GBP&symbols=EUR,TRY",
+  "https://api.frankfurter.dev/v1/latest?base=GBP&symbols=EUR,USD,TRY",
+  "https://api.frankfurter.app/latest?base=GBP&symbols=EUR,USD,TRY",
 ];
 
 /** Round to 2 dp without floating-point drift (e.g. 1.005 -> 1.01). */
@@ -55,13 +55,13 @@ async function fetchFrom(url: string): Promise<FxCache> {
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const json = (await res.json()) as FrankfurterResponse;
-  if (!json.rates || (json.rates.EUR == null && json.rates.TRY == null)) {
+  if (!json.rates || (json.rates.EUR == null && json.rates.USD == null && json.rates.TRY == null)) {
     throw new Error("Response had no rates");
   }
   return {
     base: BASE_CURRENCY,
     date: json.date,
-    rates: { EUR: json.rates.EUR, TRY: json.rates.TRY },
+    rates: { EUR: json.rates.EUR, USD: json.rates.USD, TRY: json.rates.TRY },
     fetchedAt: Date.now(),
   };
 }

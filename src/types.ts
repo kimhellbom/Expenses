@@ -1,5 +1,5 @@
 // Currencies the app supports. GBP is the base/canonical currency.
-export const CURRENCIES = ["GBP", "EUR", "TRY"] as const;
+export const CURRENCIES = ["GBP", "EUR", "USD", "TRY"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
 export const BASE_CURRENCY: Currency = "GBP";
@@ -7,6 +7,7 @@ export const BASE_CURRENCY: Currency = "GBP";
 export const CURRENCY_SYMBOL: Record<Currency, string> = {
   GBP: "£",
   EUR: "€",
+  USD: "$",
   TRY: "₺",
 };
 
