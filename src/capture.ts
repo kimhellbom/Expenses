@@ -36,6 +36,7 @@ export interface PendingTxn extends ParsedTxn {
 const SYMBOL_CURRENCY: Record<string, Currency> = {
   "£": "GBP",
   "€": "EUR",
+  $: "USD",
   "₺": "TRY",
 };
 
@@ -87,14 +88,14 @@ export function parseAmountToken(token: string): number {
 /** Find the first currency amount in a body string. */
 function findAmount(text: string): { amount: number; currency: Currency } | null {
   // Symbol-prefixed, e.g. "€7.50".
-  const sym = text.match(/([£€₺])\s?([\d.,]+)/);
+  const sym = text.match(/([£€$₺])\s?([\d.,]+)/);
   if (sym) {
     const currency = SYMBOL_CURRENCY[sym[1]];
     const amount = parseAmountToken(sym[2]);
     if (currency && Number.isFinite(amount) && amount > 0) return { amount, currency };
   }
   // ISO code, e.g. "7.50 EUR" or "EUR 7.50".
-  const code = text.match(/\b(GBP|EUR|TRY)\b\s?([\d.,]+)|([\d.,]+)\s?\b(GBP|EUR|TRY)\b/);
+  const code = text.match(/\b(GBP|EUR|USD|TRY)\b\s?([\d.,]+)|([\d.,]+)\s?\b(GBP|EUR|USD|TRY)\b/);
   if (code) {
     const currency = (code[1] ?? code[4]) as Currency;
     const amount = parseAmountToken(code[2] ?? code[3]);

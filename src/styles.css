@@ -308,6 +308,79 @@ select,
   font-size: 22px;
 }
 
+/* ---- Calculator mode ---- */
+/* Toggle sits at the trailing edge of the display without shifting the
+   centred value, so the layout stays steady when switching modes. */
+.keypad-display {
+  position: relative;
+}
+.keypad-calc-btn {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+.keypad-calc-btn:active {
+  transform: translateY(-50%) scale(0.93);
+}
+/* In calc mode the display stacks the running result over the expression. */
+.keypad-display-calc {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 2px;
+  min-height: 72px;
+}
+.calc-result {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+.calc-expr {
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  min-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.calc-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+.calc-grid .keypad-key {
+  font-size: 22px;
+  padding: 14px 0;
+}
+.calc-op {
+  background: var(--surface);
+  color: var(--muted);
+}
+.calc-eq,
+.calc-done {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+}
+.calc-done {
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+
 /* ---- Two-step Add flow (full-height, thumb-reachable) ---- */
 .add-screen {
   /* Fill the area above the fixed tab bar with a definite height, so the flex
